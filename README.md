@@ -19,7 +19,7 @@ TO-DO
 
 (h) (X?)  Debe poder continuar si es que un comando ingresado no existe, proporcionando el error correspondiente. //No especifica el error, solo muestra "Comando Desconocido"
 
-(i) (X)  Debe manejar procesos en background (comandos que se terminan con caracter &). Esto esque la shell no espere por el termino del comando, de manera que la shell pueda continuar ejecutando otros comandos. En este caso,  su shell debe registrar estos procesos de tal manera que si el usuario quiera terminar la shell, ́esta le proporcione la lista de procesos activos en background. Notar que aca no se pide hacer que un proceso background pase a foreground.
+(i) (X)  Debe manejar procesos en background (comandos que se terminan con caracter &). Esto esque la shell no espere por el termino del comando, de manera que la shell pueda continuar ejecutando otros comandos. En este caso,  su shell debe registrar estos procesos de tal manera que si el usuario quiera terminar la shell, ́esta le proporcione la lista de procesos activos en background. Notar que aca no se pide hacer que un proceso background pase a foreground. //Ejemplo: ls &, y luego exit
 
 (j) (_)  Manejar una cola de prioridades con los comandos mas frequentemente utilizados.  Asuma que tiene un maximo de k, cuyo valor se configura con un comando especial de su shell1.
 
