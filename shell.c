@@ -268,6 +268,10 @@ void printCommands(struct command *commands){
 }*/
 
 int main() {    
+
+	printf("\033[0;32m"); // Ajusta color output
+
+
     char input[MAX_INPUT_LENGTH+1];    
    	struct command *commands;
 	struct nodoPq* pq;
@@ -280,6 +284,12 @@ int main() {
     childrenBackground->_pid = -1;
     childrenBackground->prioridad = -1;
     childrenBackground->next = NULL;
+
+    /* Lista procesos defunct */
+    struct process *defunctProcesses = (struct process*)malloc(sizeof(struct process));
+    defunctProcesses->_pid = -1;
+    defunctProcesses->prioridad = -1;
+    defunctProcesses->next = NULL;
 
     int currentSize = 1;
     char *success = " Success\n\0"; //Mensaje de comando satisfactorio en el log
@@ -449,9 +459,9 @@ int main() {
                 countNodes=maxNodes;
             }
             continue;  
-
+        }   
         /* Caso exit */
-		}else if (strcmp(commands[0].argv[0], "exit") == 0){
+		else if (strcmp(commands[0].argv[0], "exit") == 0){
         	if(childrenBackground->next != NULL){
         		printf("Existen procesos ejecutandose en el background. \n");
         		printList(childrenBackground);
@@ -468,6 +478,49 @@ int main() {
         		exitCondition = TRUE;
         		break;
         	}
+        }
+        /* Caso createDefunct */
+        else if(strcmp(commands[0].argv[0], "createDefunct") == 0){
+        	pid_t pid;
+        	int amount = atoi(commands[0].argv[1]);
+
+        	for(int i = 0; i < amount; ++i){
+        		if((pid = fork()) == 0){
+        			sleep(2);
+        			exit(0);
+        		}
+
+        		/* Guarda hijo en lista defunct */
+    			struct process *hijo = (struct process*)malloc(sizeof(struct process));
+	        	hijo->next = defunctProcesses->next;
+	        	defunctProcesses->next = hijo;
+	        	hijo->_pid = pid;
+	        	hijo->prioridad = DEFAULT;
+        	}
+        	printf("\033[0;32m"); // Ajusta color output
+        	printf("%i procesos zombies creados\n",amount);
+        	continue;
+        }
+        /* Caso cleanDefunct */
+        else if(strcmp(commands[0].argv[0], "cleanDefunct") == 0){
+	    	int dfreturn = 0;
+	    	struct process *current = defunctProcesses;
+
+	    	while(current!= NULL){
+
+				if(waitpid(current->_pid, &dfreturn, 0) == current->_pid){ // retonar true si un proceso de la lista hizo exit
+					// printf("[%i] exited with status %i \n",current->_pid, dfreturn); 
+				} 			
+	    		current = current->next;
+	    	}
+
+	    	/* Resetear lista */
+	    	defunctProcesses = (struct process*)malloc(sizeof(struct process));
+		    defunctProcesses->_pid = -1;
+		    defunctProcesses->prioridad = -1;
+		    defunctProcesses->next = NULL;
+
+		    continue;
         }
 
         /* Contar comandos */
