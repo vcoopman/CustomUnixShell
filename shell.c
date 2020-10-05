@@ -219,12 +219,35 @@ struct command * parse(char* input) { //Dividimos el input en un arreglo de coma
 	        	return results;
 	        }
 	        else if (strcmp(auxParam,"|") == 0 ) break; // Pasa a guardar en el siguiente comando, no guarda el "|"
-	        else if (strcmp(auxParam,"&") == 0 ) background = TRUE;
+	        else if (strcmp(auxParam,"&") == 0 ){
+	        	background = TRUE;
+	        	break;
+	        } 
 	        
 	        results[i].argv[j] = auxParam;
 		}
     }
 };
+
+/* execute with Pipe Control */
+/* Ejecuta comandos leyendo desde un determinado fd in y escribiendo en un fd out */
+int execPC(int in, int out, struct command commands){
+	pid_t pid;
+	if((pid = fork()) == 0){
+		if(in != 0){
+			dup2(in,0);
+			close(in);
+		}
+
+		if(out != 1){
+			dup2(out,1);
+			close(out);
+		}
+
+		return execvp(commands.argv[0],commands.argv);
+	}
+	return pid;
+}
 
 void printList(struct process *node){
 	while(node != NULL){
@@ -248,6 +271,8 @@ int main() {
     char input[MAX_INPUT_LENGTH+1];    
    	struct command *commands;
 	struct nodoPq* pq;
+
+
     /* Cabeza Lista procesos background */
     /* En esta cola se va agregando desde la cabeza. Ejemplo, queremos agregar (x) a (Cabeza)--(obj1)--(obj2)*/
     /* Resultado: (Cabeza)--(x)--(obj1)--(obj2) */
@@ -264,6 +289,7 @@ int main() {
     int primNode=1;
     int maxNodes=20;
     int countNodes=0;
+
   	/* Open log file */
     FILE *fptr; //Puntero a tipo archivo
     fptr = fopen("mishell.log","a"); //Abrimos el archivo en modo append (para escribir sobre lo que existe), de no existir es creado
@@ -275,7 +301,9 @@ int main() {
     { 
         printf("Error abriendo el archivo log"); 
         return 0; 
-    } 
+    }
+
+
 
     while(!exitCondition) {
 
@@ -312,8 +340,9 @@ int main() {
     	// printList(childrenBackground);
     	
     	/* Prompt */
-	printf("\033[0;36mCustomUnixShell$:");
+		printf("\033[0;36mCustomUnixShell$:");
         printf("\033[0m");
+
         /* Input vacio con CTRL+D cierra la shell (???)*/
         if(fgets(input, sizeof(input), stdin) == NULL) break; 
 
@@ -348,26 +377,26 @@ int main() {
         strcat(log, input); // Concatenamos el input al log
 
  	/* Parse input */
-        commands = parse(input); //Dividimos el input en un arreglo de parametros
+    commands = parse(input); //Dividimos el input en un arreglo de parametros
 	/* Imprime comandos (testing) */
 	// printCommands(commands);
 
-        /* Realizar log de comandos */
+    /* Realizar log de comandos */
 	if(!strcmp(commands[0].argv[0], "execAgain")){
             int sel=0;
             printf("Que comando desea ejecutar?\n");
             displayPq(pq);
             scanf("%d",&sel);
             while(sel<=0 || sel>countNodes){
-                displayPq(pq);
                 printf("Ingrese una opción dentro de la lista:");
+                displayPq(pq);
                 scanf("%d",&sel);
             }
             strcpy(input,getCommand(pq,sel));
             commands=parse(input);
 	    while(!strcmp(commands[0].argv[0], "execAgain")){
-                printf("Que comando desea ejecutar?\n");
                 displayPq(pq);
+                printf("Que comando desea ejecutar?\n");
                 scanf("%d",&sel);
                 while(sel<=0 || sel>countNodes){
                     displayPq(pq);
@@ -398,11 +427,11 @@ int main() {
             }
             printf("Inserte el valor nuevo de prioridad:");
             scanf("%d",&pr);
+            getchar();
             strcpy(input,getCommand(pq,sel));
             modPriority(pq,input,pr);
             printf("\033[0;35mPrioridad has been changed successfully\n");
             printf("\033[0m");
-	    getchar();
             continue;
         }else if(!strcmp(commands[0].argv[0], "maxCmd")){
             //Ingresa la cantidad maxima de comandos en la lista
@@ -411,6 +440,7 @@ int main() {
             while(maxNodes<=0){
                 printf("Inserte un valor mayor que 0:");
                 scanf("%d",&maxNodes);
+                getchar();
             }
             //Si hay mas comandos una vez que se modifica a un maximo menor
             //se eliminan los sobrantes del final
@@ -418,10 +448,10 @@ int main() {
                 deleteNPq(pq,maxNodes);
                 countNodes=maxNodes;
             }
-	    getchar();
-            continue;     
+            continue;  
+
         /* Caso exit */
-	}else if (strcmp(commands[0].argv[0], "exit") == 0){
+		}else if (strcmp(commands[0].argv[0], "exit") == 0){
         	if(childrenBackground->next != NULL){
         		printf("Existen procesos ejecutandose en el background. \n");
         		printList(childrenBackground);
@@ -440,50 +470,52 @@ int main() {
         	}
         }
 
-        /* Ejecutar comandos */
-        if(commands[0].argv[0] != NULL){
-		pipe(pipefd);
-        	pid_t pid = fork();
+        /* Contar comandos */
+        int cantidadCommands = 0;
+	    for(int i = 0; i < MAX_N_COMMANDS; ++i){
+	    	if(commands[i].argv[0] != NULL) cantidadCommands++;
+	    }
+	    // printf("(TESTING)Cantidad Commands %i\n", cantidadCommands); 
+
+        /* Ejecutar comandos (Solo 1) */
+        if(cantidadCommands == 1){
+
+	    	printf("\033[0;32m"); // Ajusta color output
+       		pid_t pid = fork();
 
         	if (pid < 0){ // Error
-	        		printf("No se pudo iniciar proceso\n");
-	        		exit(1); 
+        		printf("No se pudo iniciar proceso\n");
+        		exit(1); 
 
 	        } else if (pid == 0){
-	        		/* SOLO ESTA EJECUTANDO EL PRIMER COMANDO */
-				//Se capturan los extremos del pipe para lectura en el padre
-                    		dup2(pipefd[1], STDOUT_FILENO);
-                    		close(pipefd[0]);
-                    		close(pipefd[1]);
-	        		execvp(commands[0].argv[0], commands[0].argv);
+	    		printf("\n"); // trucazo, con esto pareciera activar el cambio de color al output
 
-	        		/* En el caso que falle el execvp */
-			        printf("Comando Desconocido\n");
-			        _exit(127); //Este exit es necesario para saber si fallo el execvp, Exit de command not found
+        		execvp(commands[0].argv[0], commands[0].argv);
+
+        		/* En el caso que falle el execvp */
+		        printf("Comando Desconocido\n");
+		        _exit(127); //Este exit es necesario para saber si fallo el execvp, Exit de command not found
 
 	        } else {
+
 	        	if (!background){ // Espera por el proceso
 	        		int status; 
 	        		int wait = waitpid(pid, &status, 0);
-	        		FILE *f;
-                    		close(pipefd[1]);
-                    		int nbytes= read(pipefd[0],outp,sizeof(outp));//Se alamacena el output del comando
-                    		printf("\033[0;32m%.*s",nbytes,outp);//Se imprime de colores
-                    		printf("\033[0m");
-				if (wait > 0) {
+
+					if (wait > 0) {
 			            if (WIFEXITED(status) && !WEXITSTATUS(status)) { //Si se cumple el execvp termino bien
 			                currentSize += strlen(success);//Aumentamos el tamano del string log segun el largo del string success
 				            log = realloc(log, currentSize * sizeof(char));
 				            strcat(log,success);
 
 			            } else { //El excecvp termino mal
-					if(countNodes<maxNodes){//Elimino el ultimo comando ingresado
-                                	    deleteLastPq(pq); //Que seria el comando desconocido.
-                                            countNodes--;
-                                            if(countNodes==0){
-                                                  primNode=1; //Si el primer comando ingresado es desconocido
-                                            }
-                                        }
+							if(countNodes<maxNodes){//Elimino el ultimo comando ingresado
+                        	    deleteLastPq(pq); //Que seria el comando desconocido.
+                                countNodes--;
+                                if(countNodes==0){
+                                      primNode=1; //Si el primer comando ingresado es desconocido
+                                }
+                            }
 			                currentSize += strlen(failed);//Aumentamos el tamano del string log segun el largo del string failed
 				            log = realloc(log, currentSize * sizeof(char));
 				            strcat(log,failed);
@@ -499,8 +531,83 @@ int main() {
 			    }
 	        }
 	    }
+
+	    /* Ejecutar comandos (Varios) */
+	    if(cantidadCommands > 1){
+	    	printf("\033[0;32m"); // Ajusta color output
+
+	    	/* Crear hijos y ejecutar comandos usando pipes */
+	    	pid_t pid;
+
+	    	if((pid = fork()) == 0){ // Hijo
+		    	printf("\033[0;32m"); // Ajusta color output
+	    		// printf("Cantidad de comandos ejecutandose [%i] ... \n",cantidadCommands);
+	    		printf("\n"); // trucazo
+	    	
+		    	int in, fd[2];
+		    	in = 0;
+
+		    	for(int i = 0; i < cantidadCommands - 1; ++i){ // El ultimo command se excluye
+		    		pipe(fd);
+
+		    		execPC(in, fd[1], commands[i]); 
+
+		    		close(fd[1]);
+
+		    		in = fd[0]; /* Almacenamos el in de esta pipe, para pasarlo al siguiente comando a ejecutar */
+		    	}
+
+		    	/* Ultimo command */
+		    	if(in != 0){
+		    		dup2(in,0);
+		    		close(in);
+		    	}
+
+		    	execvp(commands[cantidadCommands - 1].argv[0], commands[cantidadCommands - 1].argv);
+
+		    	/* En el caso que falle el execvp */
+		        printf("Comando Desconocido\n");
+		        _exit(127); //Este exit es necesario para saber si fallo el execvp, Exit de command not found
+
+	    	} else { // Padre
+	    		/* Esperar por hijo o agregar a cola de background */
+		    	if (!background){ 
+	        		int status; 
+	        		int wait = waitpid(pid, &status, 0);
+
+					if (wait > 0) {
+			            if (WIFEXITED(status) && !WEXITSTATUS(status)) { //Si se cumple el execvp termino bien
+			                currentSize += strlen(success);//Aumentamos el tamano del string log segun el largo del string success
+				            log = realloc(log, currentSize * sizeof(char));
+				            strcat(log,success);
+
+			            } else { //El excecvp termino mal
+							if(countNodes<maxNodes){//Elimino el ultimo comando ingresado
+	                    	    deleteLastPq(pq); //Que seria el comando desconocido.
+	                            countNodes--;
+	                            if(countNodes==0){
+	                                primNode=1; //Si el primer comando ingresado es desconocido
+	                            }
+	                        }
+			                currentSize += strlen(failed);//Aumentamos el tamano del string log segun el largo del string failed
+				            log = realloc(log, currentSize * sizeof(char));
+				            strcat(log,failed);
+			            }
+			        }
+			    } else { // Agrega proceso a la lista de procesos background
+			    	struct process *hijo = (struct process*)malloc(sizeof(struct process));
+		        	hijo->next = childrenBackground->next;
+		        	childrenBackground->next = hijo;
+		        	hijo->_pid = pid;
+		        	hijo->prioridad = DEFAULT;
+		        	printf("[ ... ] %i\n",pid);
+			    }
+	    	}
+	    }
+
         background = FALSE;
     } 
+
     fclose(fptr); //Cerramos el archivo y se mostraran los cambios realizados en el
     deletePq(pq);
     return 0;
