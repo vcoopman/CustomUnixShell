@@ -154,9 +154,10 @@ int main() {
         log = realloc(log, currentSize * sizeof(char));
         strcat(log, input); // Concatenamos el input al log
 
-  		/* Parse input */
+ 	/* Parse input */
         commands = parse(input); //Dividimos el input en un arreglo de parametros
-        printCommands(commands);
+	/* Imprime comandos (testing) */
+	// printCommands(commands);
 
         /* Realizar log de comandos */
         if (!strcmp(commands[0].argv[0], "log")){ //Se crea el archivo de log con los datos recopilados 
