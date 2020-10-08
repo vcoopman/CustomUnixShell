@@ -11,7 +11,7 @@ TO-DO
 
 (d) (X)  Si  se  presiona  “enter“  sin  previo  comando,  la  shell  simplemente  imprime  nuevamente  el prompt.
 
-(e) (_)  Debe proporcionar la salida de la ejecucion del comando en distinto color.
+(e) (X)  Debe proporcionar la salida de la ejecucion del comando en distinto color.
 
 (f) (X)  Su shell debe crear un comando que le permita crear un archivo mishell.log con el registro de los comandos ejecutados por sesion. Este comando puede ir agregando la informacion de distintas sesiones al final del existente o puede ser reescrito.  //El log es guardado con el comando: log    , los cambios son visualizados tras salir de la terminal
 
@@ -21,10 +21,10 @@ TO-DO
 
 (i) (X)  Debe manejar procesos en background (comandos que se terminan con caracter &). Esto esque la shell no espere por el termino del comando, de manera que la shell pueda continuar ejecutando otros comandos. En este caso,  su shell debe registrar estos procesos de tal manera que si el usuario quiera terminar la shell, ́esta le proporcione la lista de procesos activos en background. Notar que aca no se pide hacer que un proceso background pase a foreground. //Ejemplo: ls &, y luego exit
 
-(j) (_)  Manejar una cola de prioridades con los comandos mas frequentemente utilizados.  Asuma que tiene un maximo de k, cuyo valor se configura con un comando especial de su shell1.
+(j) (X??)  Manejar una cola de prioridades con los comandos mas frequentemente utilizados.  Asuma que tiene un maximo de k, cuyo valor se configura con un comando especial de su shell1.
 
-(k) (_)  Desplegar por pantalla los comandos en su cola de prioridades.
+(k) (X)  Desplegar por pantalla los comandos en su cola de prioridades.
 
-(l) (_)  Elegir un comando de la lista y volver a ejecutarlo.
+(l) (X?)  Elegir un comando de la lista y volver a ejecutarlo.
 
 (m) (_)  Finalmente, investigue lo que son los procesos defuncty agregue a su shell un comando que cree N procesos defunct y un comando que permita eliminarlos.
