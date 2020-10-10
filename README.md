@@ -27,6 +27,6 @@ TO-DO
 
 (l) (X)  Elegir un comando de la lista y volver a ejecutarlo.
 
-(m) (_)  Finalmente, investigue lo que son los procesos defuncty agregue a su shell un comando que cree N procesos defunct y un comando que permita eliminarlos.
+(m) (X)  Finalmente, investigue lo que son los procesos defuncty agregue a su shell un comando que cree N procesos defunct y un comando que permita eliminarlos.
 
 (n) (X) Su shell debe considerar comandos que contengan pipes, es decir, del tipops -la|grep PRI, para ello debe utilizar las llamadas a sistema pipe(), dup() o dup2(), and close().Su shell debe soportar m ́ultiples pipes en un comando dado, por ejemplo:ls -l|grep file|wc -l
