@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 #define MAX_INPUT_LENGTH 100
 #define MAX_N_PARAMS 10
@@ -165,7 +166,36 @@ void modPriority(struct nodoPq* head, char* command, int prioridad){
     }
     printf("Comando no existe en la lista");
 }
-
+void deleteNPq(struct nodoPq* head, int max){//Elimina los excesos de la lista
+    struct nodoPq* it=head;
+    struct nodoPq* anterior=head;
+    int count=1;
+    while(it->siguiente!=NULL){
+        if(count<=max){
+            anterior=it;
+            it=it->siguiente;
+            if(count==max){
+                anterior->siguiente=NULL;
+            }
+            count++;
+        }else{
+            anterior=it;
+            it=it->siguiente;
+            free(anterior);
+        }
+    }
+    free(it);
+}
+void deleteLastPq(struct nodoPq* head){ //Elimina el ultimo comando ingresado
+    struct nodoPq* it=head;
+    struct nodoPq* anterior=head;
+    while(it->siguiente!=NULL){
+        anterior=it;
+        it=it->siguiente;
+    }
+    anterior->siguiente=NULL;
+    free(it);
+}
 struct command * parse(char* input) { //Dividimos el input en un arreglo de comandos con parametros
 	static struct command results[MAX_N_COMMANDS]; // (Global)
 	char *auxParam = NULL;
@@ -293,8 +323,6 @@ int main() {
         /* Se remueve el caracter de salto de linea al final del input */
         if(input[strlen(input)-1] == '\n') { 
             input[strlen(input)-1] = '\0';
-	    //Esto deberia ir en otra parte para que si se ingresa cualquier cosa que no sea comando
-		//No lo inserte en la lista
 	    if(primNode && countNodes<maxNodes){
                 pq=(struct nodoPq*)malloc(sizeof(struct nodoPq));
                 strcpy(pq->command,input);
@@ -337,6 +365,19 @@ int main() {
             }
             strcpy(input,getCommand(pq,sel));
             commands=parse(input);
+	    while(!strcmp(commands[0].argv[0], "execAgain")){
+                printf("Que comando desea ejecutar?\n");
+                displayPq(pq);
+                scanf("%d",&sel);
+                while(sel<=0 || sel>countNodes){
+                    displayPq(pq);
+                    printf("Ingrese una opción dentro de la lista:");
+                    scanf("%d",&sel);
+                }
+                strcpy(input,getCommand(pq,sel));
+                commands=parse(input);
+            }
+            getchar();
         }
         if (!strcmp(commands[0].argv[0], "log")){ //Se crea el archivo de log con los datos recopilados 
             fprintf(fptr,"%s\n",log); //Guardamos el log en el archivo
@@ -361,6 +402,7 @@ int main() {
             modPriority(pq,input,pr);
             printf("\033[0;35mPrioridad has been changed successfully\n");
             printf("\033[0m");
+	    getchar();
             continue;
         }else if(!strcmp(commands[0].argv[0], "maxCmd")){
             //Ingresa la cantidad maxima de comandos en la lista
@@ -371,12 +413,12 @@ int main() {
                 scanf("%d",&maxNodes);
             }
             //Si hay mas comandos una vez que se modifica a un maximo menor
-            //se elimina completa (deberia eliminar los sobrantes)
+            //se eliminan los sobrantes del final
             if(maxNodes<countNodes){
-                deletePq(pq);
-                primNode=1;
-                countNodes=0;
+                deleteNPq(pq,maxNodes);
+                countNodes=maxNodes;
             }
+	    getchar();
             continue;     
         /* Caso exit */
 	}else if (strcmp(commands[0].argv[0], "exit") == 0){
@@ -400,6 +442,7 @@ int main() {
 
         /* Ejecutar comandos */
         if(commands[0].argv[0] != NULL){
+		pipe(pipefd);
         	pid_t pid = fork();
 
         	if (pid < 0){ // Error
@@ -434,6 +477,13 @@ int main() {
 				            strcat(log,success);
 
 			            } else { //El excecvp termino mal
+					if(countNodes<maxNodes){//Elimino el ultimo comando ingresado
+                                	    deleteLastPq(pq); //Que seria el comando desconocido.
+                                            countNodes--;
+                                            if(countNodes==0){
+                                                  primNode=1; //Si el primer comando ingresado es desconocido
+                                            }
+                                        }
 			                currentSize += strlen(failed);//Aumentamos el tamano del string log segun el largo del string failed
 				            log = realloc(log, currentSize * sizeof(char));
 				            strcat(log,failed);
